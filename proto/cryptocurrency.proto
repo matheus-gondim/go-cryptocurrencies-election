@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+option go_package = "/src/pb";
+
+message Cryptocurrency {
+    int64 id = 1;
+    string name = 2;
+    string symbol = 3;
+    int64 like = 4;
+    int64 dislike = 5;
+};
+
+message CreateCryptocurrency {
+    string name = 1;
+    string symbol = 2;
+}
+
+message GetCryptocurrencyParams {}
+
+message CryptocurrencyList {
+    repeated Cryptocurrency cryptocurrencies = 1;
+}
+
+message CryptocurrencyId {
+    int64 id = 1;
+}
+
+message CryptocurrencyMessage {
+    string message = 1;
+}
+
+message UpdateCryptocurrency {
+    string name = 1;
+    string symbol = 2;
+}
+
+service CryptocurrencyElection {
+    rpc CreateNew (CreateCryptocurrency) returns (Cryptocurrency);
+    rpc FindCryptocurrencies (GetCryptocurrencyParams) returns (CryptocurrencyList);
+    rpc FindById (CryptocurrencyId) returns (Cryptocurrency);
+    rpc DeleteById(CryptocurrencyId) returns (CryptocurrencyMessage);
+    rpc UpdateById (UpdateCryptocurrency) returns (CryptocurrencyMessage);
+    rpc UpvoteById (CryptocurrencyId) returns (Cryptocurrency);
+    rpc DownvoteById (CryptocurrencyId) returns (Cryptocurrency);
+}
