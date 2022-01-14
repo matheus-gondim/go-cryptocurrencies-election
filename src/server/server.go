@@ -83,7 +83,18 @@ func (s *CryptocurrencyElectionServer) UpdateById(context.Context, *pb.UpdateCry
 }
 
 func (s *CryptocurrencyElectionServer) UpvoteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpvoteById not implemented")
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	c.Like++
+
+	if err := s.db.Save(c).Error; err != nil {
+		return nil, err
+	}
+
+	return c.ToOutput(), nil
 }
 
 func (s *CryptocurrencyElectionServer) DownvoteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
