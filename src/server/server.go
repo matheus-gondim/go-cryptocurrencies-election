@@ -11,14 +11,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"gorm.io/gorm"
 )
 
 type CryptocurrencyElectionServer struct {
+	db *gorm.DB
 	pb.UnimplementedCryptocurrencyElectionServer
 }
 
-func NewCryptocurrencyElectionServer() *CryptocurrencyElectionServer {
-	return &CryptocurrencyElectionServer{}
+func NewCryptocurrencyElectionServer(db *gorm.DB) *CryptocurrencyElectionServer {
+	return &CryptocurrencyElectionServer{db: db}
 }
 
 func (s *CryptocurrencyElectionServer) Run(port string) error {
@@ -36,6 +38,7 @@ func (s *CryptocurrencyElectionServer) Run(port string) error {
 
 func (s *CryptocurrencyElectionServer) CreateNew(ctx context.Context, in *pb.CreateCryptocurrency) (*pb.Cryptocurrency, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNew not implemented")
+
 }
 
 func (s *CryptocurrencyElectionServer) FindCryptocurrencies(ctx context.Context, in *pb.GetCryptocurrencyParams) (*pb.CryptocurrencyList, error) {
