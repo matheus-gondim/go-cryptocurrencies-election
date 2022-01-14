@@ -66,27 +66,61 @@ func (s *CryptocurrencyElectionServer) FindCryptocurrencies(ctx context.Context,
 }
 
 func (s *CryptocurrencyElectionServer) FindById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
-	if in.GetId() <= 0 {
-		return nil, errors.New("Id is a required parameter")
-	}
-	c := &entity.Cryptocurrency{}
-
-	if err := s.db.First(c, in.GetId()).Error; err != nil {
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
 		return nil, err
 	}
 
 	return c.ToOutput(), nil
 }
 
-func (s *CryptocurrencyElectionServer) DeleteById(context.Context, *pb.CryptocurrencyId) (*pb.CryptocurrencyMessage, error) {
+func (s *CryptocurrencyElectionServer) DeleteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.CryptocurrencyMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteById not implemented")
 }
+
 func (s *CryptocurrencyElectionServer) UpdateById(context.Context, *pb.UpdateCryptocurrency) (*pb.CryptocurrencyMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateById not implemented")
 }
-func (s *CryptocurrencyElectionServer) UpvoteById(context.Context, *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpvoteById not implemented")
+
+func (s *CryptocurrencyElectionServer) UpvoteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	c.Like++
+
+	if err := s.db.Save(c).Error; err != nil {
+		return nil, err
+	}
+
+	return c.ToOutput(), nil
 }
-func (s *CryptocurrencyElectionServer) DownvoteById(context.Context, *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DownvoteById not implemented")
+
+func (s *CryptocurrencyElectionServer) DownvoteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	c.Dislike++
+
+	if err := s.db.Save(c).Error; err != nil {
+		return nil, err
+	}
+
+	return c.ToOutput(), nil
+}
+
+func (s *CryptocurrencyElectionServer) findCryptocurrencyById(id int64) (*entity.Cryptocurrency, error) {
+	if id <= 0 {
+		return nil, errors.New("Id is a required parameter")
+	}
+	c := &entity.Cryptocurrency{}
+
+	if err := s.db.First(c, id).Error; err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }
