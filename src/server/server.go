@@ -52,10 +52,20 @@ func (s *CryptocurrencyElectionServer) CreateNew(ctx context.Context, in *pb.Cre
 }
 
 func (s *CryptocurrencyElectionServer) FindCryptocurrencies(ctx context.Context, in *pb.GetCryptocurrencyParams) (*pb.CryptocurrencyList, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindCryptocurrencies not implemented")
+	cryptocurrencylist := []entity.Cryptocurrency{}
+	if err := s.db.Find(&cryptocurrencylist).Error; err != nil {
+		return nil, err
+	}
+
+	cryptocurrencies := []*pb.Cryptocurrency{}
+	for _, c := range cryptocurrencylist {
+		cryptocurrencies = append(cryptocurrencies, c.ToOutput())
+	}
+
+	return &pb.CryptocurrencyList{Cryptocurrencies: cryptocurrencies}, nil
 }
 
-func (s *CryptocurrencyElectionServer) FindById(context.Context, *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
+func (s *CryptocurrencyElectionServer) FindById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindById not implemented")
 }
 func (s *CryptocurrencyElectionServer) DeleteById(context.Context, *pb.CryptocurrencyId) (*pb.CryptocurrencyMessage, error) {
