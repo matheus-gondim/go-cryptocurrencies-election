@@ -34,6 +34,20 @@ type Server struct {
 	UnimplementedCryptocurrencyElectionServer pb.UnimplementedCryptocurrencyElectionServer
 }
 
+var (
+	cryptocurrencyMock       = &pb.Cryptocurrency{Id: 1, Name: "Cryptocurrency Test", Symbol: "CCT", Like: 0, Dislike: 0}
+	createCryptocurrencyMock = &pb.CreateCryptocurrency{Name: "Cryptocurrency Test", Symbol: "CCT"}
+	contextMock              = context.Background()
+	cryptocurrencyListMock   = &pb.CryptocurrencyList{Cryptocurrencies: []*pb.Cryptocurrency{cryptocurrencyMock}}
+	cryptocurrencyIdMock     = &pb.CryptocurrencyId{Id: 1}
+)
+
+type BasicTestStruct struct {
+	name    string
+	fields  Server
+	wantErr bool
+}
+
 func Test_CreateNew_WhenSuccess(t *testing.T) {
 	db := initDBTest()
 	defer closeDBTest(db)
@@ -43,21 +57,18 @@ func Test_CreateNew_WhenSuccess(t *testing.T) {
 		in  *pb.CreateCryptocurrency
 	}
 	tests := []struct {
-		name    string
-		fields  Server
-		args    args
-		want    *pb.Cryptocurrency
-		wantErr bool
+		BasicTestStruct
+		args args
+		want *pb.Cryptocurrency
 	}{
 		{
-			name:   "",
-			fields: Server{db: db},
-			args: args{
-				context.Background(),
-				&pb.CreateCryptocurrency{Name: "Cryptocurrency Test", Symbol: "CCT"},
+			BasicTestStruct: BasicTestStruct{
+				name:    "should create a cryptocurrency object when successful",
+				fields:  Server{db: db},
+				wantErr: false,
 			},
-			want:    &pb.Cryptocurrency{Id: 1, Name: "Cryptocurrency Test", Symbol: "CCT", Like: 0, Dislike: 0},
-			wantErr: false,
+			args: args{contextMock, createCryptocurrencyMock},
+			want: cryptocurrencyMock,
 		},
 	}
 	for _, tt := range tests {
@@ -78,7 +89,7 @@ func Test_CreateNew_WhenSuccess(t *testing.T) {
 	}
 }
 
-func Test_CreateNew_BadRequest(t *testing.T) {
+func Test_CreateNew_WhenBadRequest(t *testing.T) {
 	db := initDBTest()
 	defer closeDBTest(db)
 
@@ -87,21 +98,18 @@ func Test_CreateNew_BadRequest(t *testing.T) {
 		in  *pb.CreateCryptocurrency
 	}
 	tests := []struct {
-		name    string
-		fields  Server
-		args    args
-		want    string
-		wantErr bool
+		BasicTestStruct
+		args args
+		want string
 	}{
 		{
-			name:   "",
-			fields: Server{db: db},
-			args: args{
-				context.Background(),
-				&pb.CreateCryptocurrency{Name: "", Symbol: ""},
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return an error when the dto is invalid",
+				fields:  Server{db: db},
+				wantErr: true,
 			},
-			want:    "name: cannot be blank; symbol: cannot be blank.",
-			wantErr: false,
+			args: args{contextMock, &pb.CreateCryptocurrency{}},
+			want: "name: cannot be blank; symbol: cannot be blank.",
 		},
 	}
 	for _, tt := range tests {
@@ -113,6 +121,177 @@ func Test_CreateNew_BadRequest(t *testing.T) {
 			_, err := s.CreateNew(tt.args.ctx, tt.args.in)
 			if !reflect.DeepEqual(err.Error(), tt.want) {
 				t.Errorf("CryptocurrencyElectionServer.CreateNew() = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func Test_FindCryptocurrencies_WhenSuccess(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.GetCryptocurrencyParams
+	}
+
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want *pb.CryptocurrencyList
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return a list of cryptocurrencies when successful",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{ctx: contextMock, in: &pb.GetCryptocurrencyParams{}},
+			want: cryptocurrencyListMock,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			got, err := s.FindCryptocurrencies(tt.args.ctx, tt.args.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CryptocurrencyElectionServer.FindCryptocurrencies() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.FindCryptocurrencies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_FindById_WhenSuccess(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.CryptocurrencyId
+	}
+
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want *pb.Cryptocurrency
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return a cryptocurrency by id when successful",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, cryptocurrencyIdMock},
+			want: cryptocurrencyMock,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			got, err := s.FindById(tt.args.ctx, tt.args.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CryptocurrencyElectionServer.FindById() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.FindById() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_FindById_WhenBadRequest(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.CryptocurrencyId
+	}
+
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want string
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return an error when the dto is invalid",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.CryptocurrencyId{}},
+			want: "Id is a required parameter",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			_, err := s.FindById(tt.args.ctx, tt.args.in)
+
+			if !reflect.DeepEqual(err.Error(), tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.FindById() = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func Test_FindById_WhenNotFoundEntity(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.CryptocurrencyId
+	}
+
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want string
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return an error when entity not found",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.CryptocurrencyId{Id: 2}},
+			want: "record not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			_, err := s.FindById(tt.args.ctx, tt.args.in)
+
+			if !reflect.DeepEqual(err.Error(), tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.FindById() = %v, want %v", err, tt.want)
 			}
 		})
 	}
