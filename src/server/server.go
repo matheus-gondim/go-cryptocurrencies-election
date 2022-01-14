@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/matheus-gondim/go-cryptocurrencies-election/src/entity"
 	"github.com/matheus-gondim/go-cryptocurrencies-election/src/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -37,8 +38,17 @@ func (s *CryptocurrencyElectionServer) Run(port string) error {
 }
 
 func (s *CryptocurrencyElectionServer) CreateNew(ctx context.Context, in *pb.CreateCryptocurrency) (*pb.Cryptocurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateNew not implemented")
+	if err := in.IsValid(); err != nil {
+		return nil, err
+	}
 
+	c := new(entity.Cryptocurrency).FromCreate(in)
+
+	if err := s.db.Create(&c).Error; err != nil {
+		return nil, err
+	}
+
+	return c.ToOutput(), nil
 }
 
 func (s *CryptocurrencyElectionServer) FindCryptocurrencies(ctx context.Context, in *pb.GetCryptocurrencyParams) (*pb.CryptocurrencyList, error) {
