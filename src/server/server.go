@@ -66,8 +66,18 @@ func (s *CryptocurrencyElectionServer) FindCryptocurrencies(ctx context.Context,
 }
 
 func (s *CryptocurrencyElectionServer) FindById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindById not implemented")
+	if in.GetId() <= 0 {
+		return nil, errors.New("Id is a required parameter")
+	}
+	c := &entity.Cryptocurrency{}
+
+	if err := s.db.First(c, in.GetId()).Error; err != nil {
+		return nil, err
+	}
+
+	return c.ToOutput(), nil
 }
+
 func (s *CryptocurrencyElectionServer) DeleteById(context.Context, *pb.CryptocurrencyId) (*pb.CryptocurrencyMessage, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteById not implemented")
 }
