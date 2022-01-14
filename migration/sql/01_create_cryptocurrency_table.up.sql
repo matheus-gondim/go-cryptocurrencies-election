@@ -1,0 +1,10 @@
+CREATE TABLE "cryptocurrencies"(
+    "id" SERIAL PRIMARY KEY,
+    "name" CHARACTER VARYING(255) NOT NULL,
+    "symbol" CHARACTER VARYING(5) NOT NULL,
+    "like" NUMERIC NOT NULL DEFAULT 0,
+    "dislike" NUMERIC NOT NULL DEFAULT 0,
+	"created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+	"updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    UNIQUE("name", "symbol")
+)
