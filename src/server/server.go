@@ -75,7 +75,18 @@ func (s *CryptocurrencyElectionServer) FindById(ctx context.Context, in *pb.Cryp
 }
 
 func (s *CryptocurrencyElectionServer) DeleteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.CryptocurrencyMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteById not implemented")
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.db.Delete(c).Error; err != nil {
+		return nil, err
+	}
+
+	message := fmt.Sprintf("%s cryptocurrency has been deleted", c.Name)
+
+	return &pb.CryptocurrencyMessage{Message: message}, nil
 }
 
 func (s *CryptocurrencyElectionServer) UpdateById(context.Context, *pb.UpdateCryptocurrency) (*pb.CryptocurrencyMessage, error) {
