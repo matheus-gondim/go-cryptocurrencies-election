@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"reflect"
 	"testing"
@@ -461,7 +462,94 @@ func Test_DownvoteById_WhenNotFoundEntity(t *testing.T) {
 			_, err := s.DownvoteById(tt.args.ctx, tt.args.in)
 
 			if !reflect.DeepEqual(err.Error(), tt.want) {
-				t.Errorf("CryptocurrencyElectionServer.FindById() = %v, want %v", err, tt.want)
+				t.Errorf("CryptocurrencyElectionServer.DownvoteById() = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func Test_DeleteById_WhenSuccess(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.CryptocurrencyId
+	}
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want *pb.CryptocurrencyMessage
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.CryptocurrencyId{Id: 1}},
+			want: &pb.CryptocurrencyMessage{
+				Message: fmt.Sprintf("%s cryptocurrency has been deleted", cryptocurrencyMock.Name),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			got, err := s.DeleteById(tt.args.ctx, tt.args.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CryptocurrencyElectionServer.DeleteById() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.DeleteById() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_DeleteById_WhenNotFoundEntity(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.CryptocurrencyId
+	}
+
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want string
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return an error when entity not found",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.CryptocurrencyId{Id: 2}},
+			want: "record not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			_, err := s.DeleteById(tt.args.ctx, tt.args.in)
+
+			if !reflect.DeepEqual(err.Error(), tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.DeleteById() = %v, want %v", err, tt.want)
 			}
 		})
 	}
