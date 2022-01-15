@@ -26,3 +26,12 @@ func (c *Cryptocurrency) FromCreate(dto *pb.CreateCryptocurrency) *Cryptocurrenc
 func (c *Cryptocurrency) ToOutput() *pb.Cryptocurrency {
 	return &pb.Cryptocurrency{Id: c.ID, Name: c.Name, Symbol: c.Symbol, Like: c.Like, Dislike: c.Dislike}
 }
+
+func (c *Cryptocurrency) FromUpdate(dto *pb.UpdateCryptocurrency) {
+	if dto.GetName() != "" {
+		c.Name = dto.GetName()
+	}
+	if dto.GetSymbol() != "" {
+		c.Symbol = dto.Symbol
+	}
+}
