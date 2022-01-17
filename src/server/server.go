@@ -10,8 +10,6 @@ import (
 	"github.com/matheus-gondim/go-cryptocurrencies-election/src/entity"
 	"github.com/matheus-gondim/go-cryptocurrencies-election/src/pb"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"gorm.io/gorm"
 )
 
@@ -85,12 +83,27 @@ func (s *CryptocurrencyElectionServer) DeleteById(ctx context.Context, in *pb.Cr
 	}
 
 	message := fmt.Sprintf("%s cryptocurrency has been deleted", c.Name)
-
 	return &pb.CryptocurrencyMessage{Message: message}, nil
 }
 
-func (s *CryptocurrencyElectionServer) UpdateById(context.Context, *pb.UpdateCryptocurrency) (*pb.CryptocurrencyMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateById not implemented")
+func (s *CryptocurrencyElectionServer) UpdateById(ctx context.Context, in *pb.UpdateCryptocurrency) (*pb.CryptocurrencyMessage, error) {
+	if err := in.IsValid(); err != nil {
+		return nil, err
+	}
+
+	c, err := s.findCryptocurrencyById(in.GetId())
+	if err != nil {
+		return nil, err
+	}
+
+	c.FromUpdate(in)
+
+	if err := s.db.Save(c).Error; err != nil {
+		return nil, err
+	}
+
+	message := fmt.Sprintf("%d cryptocurrency has been updated", c.ID)
+	return &pb.CryptocurrencyMessage{Message: message}, nil
 }
 
 func (s *CryptocurrencyElectionServer) UpvoteById(ctx context.Context, in *pb.CryptocurrencyId) (*pb.Cryptocurrency, error) {
