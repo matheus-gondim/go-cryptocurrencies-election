@@ -485,7 +485,7 @@ func Test_DeleteById_WhenSuccess(t *testing.T) {
 	}{
 		{
 			BasicTestStruct: BasicTestStruct{
-				name:    "",
+				name:    "should delete a cryptocurrency by id",
 				fields:  Server{db: db},
 				wantErr: false,
 			},
@@ -550,6 +550,131 @@ func Test_DeleteById_WhenNotFoundEntity(t *testing.T) {
 
 			if !reflect.DeepEqual(err.Error(), tt.want) {
 				t.Errorf("CryptocurrencyElectionServer.DeleteById() = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func Test_UpdateById_WhenSuccess(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.UpdateCryptocurrency
+	}
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want *pb.CryptocurrencyMessage
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should update a cryptocurrency by id",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.UpdateCryptocurrency{Id: 1, Name: "name updated", Symbol: "sybup"}},
+			want: &pb.CryptocurrencyMessage{
+				Message: fmt.Sprintf("%d cryptocurrency has been updated", cryptocurrencyMock.Id),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			got, err := s.UpdateById(tt.args.ctx, tt.args.in)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CryptocurrencyElectionServer.UpdateById() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.UpdateById() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_UpdateById_WhenBadRequest(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.UpdateCryptocurrency
+	}
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want string
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return bad request error when id is less than or equal to zero",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.UpdateCryptocurrency{Id: 0}},
+			want: "id: cannot be blank.",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			_, err := s.UpdateById(tt.args.ctx, tt.args.in)
+			if !reflect.DeepEqual(err.Error(), tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.UpdateById() = %v, want %v", err, tt.want)
+			}
+		})
+	}
+}
+
+func Test_UpdateById_WhenNotFoundEntity(t *testing.T) {
+	db := initDBTest()
+	defer closeDBTest(db)
+
+	db.Create(cryptocurrencyMock)
+
+	type args struct {
+		ctx context.Context
+		in  *pb.UpdateCryptocurrency
+	}
+	tests := []struct {
+		BasicTestStruct
+		args args
+		want string
+	}{
+		{
+			BasicTestStruct: BasicTestStruct{
+				name:    "should return an error when entity not found",
+				fields:  Server{db: db},
+				wantErr: false,
+			},
+			args: args{contextMock, &pb.UpdateCryptocurrency{Id: 2}},
+			want: "record not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &CryptocurrencyElectionServer{
+				db: tt.fields.db,
+				UnimplementedCryptocurrencyElectionServer: tt.fields.UnimplementedCryptocurrencyElectionServer,
+			}
+			_, err := s.UpdateById(tt.args.ctx, tt.args.in)
+
+			if !reflect.DeepEqual(err.Error(), tt.want) {
+				t.Errorf("CryptocurrencyElectionServer.UpdateById() = %v, want %v", err, tt.want)
 			}
 		})
 	}
