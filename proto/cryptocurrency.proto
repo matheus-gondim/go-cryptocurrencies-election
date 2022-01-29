@@ -43,4 +43,5 @@ service CryptocurrencyElection {
     rpc UpdateById (UpdateCryptocurrency) returns (CryptocurrencyMessage);
     rpc UpvoteById (CryptocurrencyId) returns (Cryptocurrency);
     rpc DownvoteById (CryptocurrencyId) returns (Cryptocurrency);
+    rpc FetchResponse (CryptocurrencyId) returns (stream Cryptocurrency);
 }

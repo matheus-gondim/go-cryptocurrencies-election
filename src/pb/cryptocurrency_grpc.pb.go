@@ -29,6 +29,7 @@ type CryptocurrencyElectionClient interface {
 	UpdateById(ctx context.Context, in *UpdateCryptocurrency, opts ...grpc.CallOption) (*CryptocurrencyMessage, error)
 	UpvoteById(ctx context.Context, in *CryptocurrencyId, opts ...grpc.CallOption) (*Cryptocurrency, error)
 	DownvoteById(ctx context.Context, in *CryptocurrencyId, opts ...grpc.CallOption) (*Cryptocurrency, error)
+	FetchResponse(ctx context.Context, in *CryptocurrencyId, opts ...grpc.CallOption) (CryptocurrencyElection_FetchResponseClient, error)
 }
 
 type cryptocurrencyElectionClient struct {
@@ -102,6 +103,38 @@ func (c *cryptocurrencyElectionClient) DownvoteById(ctx context.Context, in *Cry
 	return out, nil
 }
 
+func (c *cryptocurrencyElectionClient) FetchResponse(ctx context.Context, in *CryptocurrencyId, opts ...grpc.CallOption) (CryptocurrencyElection_FetchResponseClient, error) {
+	stream, err := c.cc.NewStream(ctx, &CryptocurrencyElection_ServiceDesc.Streams[0], "/CryptocurrencyElection/FetchResponse", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &cryptocurrencyElectionFetchResponseClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type CryptocurrencyElection_FetchResponseClient interface {
+	Recv() (*Cryptocurrency, error)
+	grpc.ClientStream
+}
+
+type cryptocurrencyElectionFetchResponseClient struct {
+	grpc.ClientStream
+}
+
+func (x *cryptocurrencyElectionFetchResponseClient) Recv() (*Cryptocurrency, error) {
+	m := new(Cryptocurrency)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // CryptocurrencyElectionServer is the server API for CryptocurrencyElection service.
 // All implementations must embed UnimplementedCryptocurrencyElectionServer
 // for forward compatibility
@@ -113,6 +146,7 @@ type CryptocurrencyElectionServer interface {
 	UpdateById(context.Context, *UpdateCryptocurrency) (*CryptocurrencyMessage, error)
 	UpvoteById(context.Context, *CryptocurrencyId) (*Cryptocurrency, error)
 	DownvoteById(context.Context, *CryptocurrencyId) (*Cryptocurrency, error)
+	FetchResponse(*CryptocurrencyId, CryptocurrencyElection_FetchResponseServer) error
 	mustEmbedUnimplementedCryptocurrencyElectionServer()
 }
 
@@ -140,6 +174,9 @@ func (UnimplementedCryptocurrencyElectionServer) UpvoteById(context.Context, *Cr
 }
 func (UnimplementedCryptocurrencyElectionServer) DownvoteById(context.Context, *CryptocurrencyId) (*Cryptocurrency, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DownvoteById not implemented")
+}
+func (UnimplementedCryptocurrencyElectionServer) FetchResponse(*CryptocurrencyId, CryptocurrencyElection_FetchResponseServer) error {
+	return status.Errorf(codes.Unimplemented, "method FetchResponse not implemented")
 }
 func (UnimplementedCryptocurrencyElectionServer) mustEmbedUnimplementedCryptocurrencyElectionServer() {
 }
@@ -281,6 +318,27 @@ func _CryptocurrencyElection_DownvoteById_Handler(srv interface{}, ctx context.C
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CryptocurrencyElection_FetchResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(CryptocurrencyId)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(CryptocurrencyElectionServer).FetchResponse(m, &cryptocurrencyElectionFetchResponseServer{stream})
+}
+
+type CryptocurrencyElection_FetchResponseServer interface {
+	Send(*Cryptocurrency) error
+	grpc.ServerStream
+}
+
+type cryptocurrencyElectionFetchResponseServer struct {
+	grpc.ServerStream
+}
+
+func (x *cryptocurrencyElectionFetchResponseServer) Send(m *Cryptocurrency) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // CryptocurrencyElection_ServiceDesc is the grpc.ServiceDesc for CryptocurrencyElection service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -317,6 +375,12 @@ var CryptocurrencyElection_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _CryptocurrencyElection_DownvoteById_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "FetchResponse",
+			Handler:       _CryptocurrencyElection_FetchResponse_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "proto/cryptocurrency.proto",
 }
