@@ -16,10 +16,14 @@ import (
 type CryptocurrencyElectionServer struct {
 	db *gorm.DB
 	pb.UnimplementedCryptocurrencyElectionServer
+	steams map[int64]func()
 }
 
 func NewCryptocurrencyElectionServer(db *gorm.DB) *CryptocurrencyElectionServer {
-	return &CryptocurrencyElectionServer{db: db}
+	return &CryptocurrencyElectionServer{
+		db:     db,
+		steams: make(map[int64]func()),
+	}
 }
 
 func (s *CryptocurrencyElectionServer) Run(port string) error {
@@ -98,10 +102,7 @@ func (s *CryptocurrencyElectionServer) UpdateById(ctx context.Context, in *pb.Up
 
 	c.FromUpdate(in)
 
-	if err := s.db.Save(c).Error; err != nil {
-		return nil, err
-	}
-
+	s.update(c)
 	message := fmt.Sprintf("%d cryptocurrency has been updated", c.ID)
 	return &pb.CryptocurrencyMessage{Message: message}, nil
 }
@@ -114,10 +115,7 @@ func (s *CryptocurrencyElectionServer) UpvoteById(ctx context.Context, in *pb.Cr
 
 	c.Like++
 
-	if err := s.db.Save(c).Error; err != nil {
-		return nil, err
-	}
-
+	s.update(c)
 	return c.ToOutput(), nil
 }
 
@@ -129,11 +127,40 @@ func (s *CryptocurrencyElectionServer) DownvoteById(ctx context.Context, in *pb.
 
 	c.Dislike++
 
+	s.update(c)
+	return c.ToOutput(), nil
+}
+
+func (s *CryptocurrencyElectionServer) FetchResponse(in *pb.CryptocurrencyId, srv pb.CryptocurrencyElection_FetchResponseServer) error {
+	id := in.GetId()
+
+	if id <= 0 {
+		return errors.New("Id is a required parameter")
+	}
+
+	s.steams[id] = func() {
+		c, _ := s.findCryptocurrencyById(id)
+
+		if err := srv.Send(c.ToOutput()); err != nil {
+			log.Printf("send error %v", err)
+		}
+	}
+
+	s.steams[id]()
+
+	select {}
+}
+
+func (s *CryptocurrencyElectionServer) update(c *entity.Cryptocurrency) (*entity.Cryptocurrency, error) {
 	if err := s.db.Save(c).Error; err != nil {
 		return nil, err
 	}
 
-	return c.ToOutput(), nil
+	if s.steams[c.ID] != nil {
+		s.steams[c.ID]()
+	}
+
+	return c, nil
 }
 
 func (s *CryptocurrencyElectionServer) findCryptocurrencyById(id int64) (*entity.Cryptocurrency, error) {
